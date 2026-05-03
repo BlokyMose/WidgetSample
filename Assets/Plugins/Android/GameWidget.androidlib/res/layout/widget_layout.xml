@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Widget layout for the game login tracker.
+    RemoteViews only supports a limited set of views:
+    FrameLayout, LinearLayout, RelativeLayout, ImageView, TextView, etc.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="8dp"
+    android:background="@drawable/widget_background">
+
+    <!-- Main character image that changes based on login status -->
+    <ImageView
+        android:id="@+id/widget_image"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/widget_sad"
+        android:contentDescription="Game character"
+        android:scaleType="fitCenter" />
+
+    <!-- Status text -->
+    <TextView
+        android:id="@+id/widget_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Come play today!"
+        android:textSize="12sp"
+        android:textColor="#FFFFFF"
+        android:gravity="center"
+        android:maxLines="2" />
+
+</LinearLayout>

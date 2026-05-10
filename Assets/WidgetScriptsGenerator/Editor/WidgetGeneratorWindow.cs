@@ -8,11 +8,37 @@ namespace WidgetScriptsGenerator.Editor
     public class WidgetGeneratorWindow : EditorWindow
     {
         const string PLACEHOLDER_PACKAGE = "com.RayOfGames.WidgetSample";
-        const string SAMPLES_ROOT = "Assets/WidgetScriptsGenerator/Editor";
-        const string SCRIPTS_SAMPLE = SAMPLES_ROOT + "/Scripts.sample";
-        const string PLUGINS_SAMPLE = SAMPLES_ROOT + "/Plugins.sample";
         const string PLUGINS_DEST = "Assets/Plugins/Android";
         const string ANDROIDLIB_FOLDER = "GameWidget.androidlib";
+
+        static string SamplesRoot
+        {
+            get
+            {
+                // Locate this script file and derive the Editor folder path from it.
+                var scriptGuid = AssetDatabase.FindAssets($"t:MonoScript {nameof(WidgetGeneratorWindow)}");
+                foreach (var guid in scriptGuid)
+                {
+                    string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                    if (assetPath.EndsWith($"{nameof(WidgetGeneratorWindow)}.cs"))
+                    {
+                        string dirAssetPath = Path.GetDirectoryName(assetPath).Replace('\\', '/');
+                        return Path.GetFullPath(dirAssetPath).Replace('\\', '/');
+                    }
+                }
+                // Fallback 1: Package path
+                string packagePath = "Packages/com.rayofideas.widgetscriptsgenerator/Editor";
+                string packageFull = Path.GetFullPath(packagePath).Replace('\\', '/');
+                if (Directory.Exists(packageFull))
+                    return packageFull;
+
+                // Fallback 2: Assets path
+                return Path.GetFullPath("Assets/WidgetScriptsGenerator/Editor").Replace('\\', '/');
+            }
+        }
+
+        static string ScriptsSample => SamplesRoot + "/Scripts.sample";
+        static string PluginsSample => SamplesRoot + "/Plugins.sample";
 
         string _packageName;
         string _scriptsFolder = "Assets/Scripts";
@@ -288,7 +314,7 @@ namespace WidgetScriptsGenerator.Editor
                 return 0;
             }
 
-            string samplePath = Path.Combine(SCRIPTS_SAMPLE, fileName + ".sample");
+            string samplePath = Path.Combine(ScriptsSample, fileName + ".sample");
             if (!File.Exists(samplePath))
             {
                 Debug.LogWarning($"[WidgetGenerator] Sample file not found: {samplePath}");
@@ -304,7 +330,7 @@ namespace WidgetScriptsGenerator.Editor
 
         int GenerateAndroidLib(bool overwrite, ref int skipped)
         {
-            string srcRoot = Path.Combine(PLUGINS_SAMPLE, "Android", ANDROIDLIB_FOLDER);
+            string srcRoot = Path.Combine(PluginsSample, "Android", ANDROIDLIB_FOLDER);
             string destRoot = Path.Combine(PLUGINS_DEST, ANDROIDLIB_FOLDER);
 
             if (!Directory.Exists(srcRoot))
@@ -376,7 +402,7 @@ namespace WidgetScriptsGenerator.Editor
                 return 0;
             }
 
-            string srcPath = Path.Combine(PLUGINS_SAMPLE, "Android", fileName);
+            string srcPath = Path.Combine(PluginsSample, "Android", fileName);
             if (!File.Exists(srcPath))
             {
                 Debug.LogWarning($"[WidgetGenerator] Sample not found: {srcPath}");

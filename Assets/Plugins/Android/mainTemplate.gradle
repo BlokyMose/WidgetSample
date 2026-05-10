@@ -20,12 +20,6 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    sourceSets {
-        main {
-            java.srcDirs += ['src/main/java']
-        }
-    }
-
     defaultConfig {
         minSdk **MINSDK**
         targetSdk **TARGETSDK**

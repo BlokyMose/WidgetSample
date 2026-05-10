@@ -2,51 +2,68 @@ using System;
 using System.IO;
 using UnityEngine;
 
-public partial class WidgetDataWriter : MonoBehaviour
+public class WidgetDataWriter : MonoBehaviour
 {
-    [Header("Widget data file name (must match the Kotlin provider)")]
-    [SerializeField] private string fileName = "widget_data.json";
+    /// <summary>
+    /// Widget data file name. Must match WIDGET_DATA_FILE in GameWidgetProvider.java.
+    /// </summary>
+    const string FILE_NAME = "widget_data.json";
 
-    private void Start()
+    /// <summary>
+    /// Day boundary hour. Before this hour counts as the previous day.
+    /// Must match DAY_BOUNDARY_HOUR in GameWidgetProvider.java.
+    /// </summary>
+    const int DAY_BOUNDARY_HOUR = 6;
+
+    void Start()
     {
         RecordLogin();
+    }
+
+    /// <summary>
+    /// Returns the "effective date" for login purposes.
+    /// Day boundary is 6:00 AM — playing before 6am counts as the previous day.
+    /// </summary>
+    DateTime GetEffectiveDate()
+    {
+        return DateTime.Now.AddHours(-DAY_BOUNDARY_HOUR).Date;
     }
 
     public void RecordLogin()
     {
         var data = new WidgetData
         {
-            lastLoginDate = DateTime.Now.ToString("yyyy-MM-dd"),
+            lastLoginDate = GetEffectiveDate().ToString("yyyy-MM-dd"),
             streak = LoadCurrentStreak()
         };
 
-        string json = JsonUtility.ToJson(data, prettyPrint: true);
-        string path = Path.Combine(Application.persistentDataPath, fileName);
+        var json = JsonUtility.ToJson(data, prettyPrint: true);
+        var path = Path.Combine(Application.persistentDataPath, FILE_NAME);
         File.WriteAllText(path, json);
 
         Debug.Log($"[WidgetDataWriter] Saved widget data to {path}");
-        RequestWidgetUpdate();
+        WidgetUtility.RequestWidgetUpdate();
     }
 
-    private int LoadCurrentStreak()
+    int LoadCurrentStreak()
     {
-        string path = Path.Combine(Application.persistentDataPath, fileName);
+        var path = Path.Combine(Application.persistentDataPath, FILE_NAME);
 
         if (!File.Exists(path))
             return 1;
 
         try
         {
-            string existingJson = File.ReadAllText(path);
+            var existingJson = File.ReadAllText(path);
             var existing = JsonUtility.FromJson<WidgetData>(existingJson);
             DateTime lastLogin = DateTime.Parse(existing.lastLoginDate);
-            DateTime today = DateTime.Now.Date;
+            DateTime effectiveToday = GetEffectiveDate();
 
-            if (lastLogin.Date == today)
+            if (lastLogin == effectiveToday)
             {
                 return existing.streak;
             }
-            else if (lastLogin.Date == today.AddDays(-1))
+            else if (lastLogin == effectiveToday.AddDays(-1))
             {
                 return existing.streak + 1;
             }
@@ -60,49 +77,5 @@ public partial class WidgetDataWriter : MonoBehaviour
             Debug.LogWarning($"[WidgetDataWriter] Could not read existing data: {e.Message}");
             return 1;
         }
-    }
-
-    private void RequestWidgetUpdate()
-    {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        try
-        {
-            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-            using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
-            using (var context = activity.Call<AndroidJavaObject>("getApplicationContext"))
-            using (var intent = new AndroidJavaObject("android.content.Intent",
-                       "com.unity3d.player.UnityPlayer"))
-            {
-                using (var componentName = new AndroidJavaObject(
-                    "android.content.ComponentName",
-                    context,
-                    new AndroidJavaClass(
-                        "com.RayOfGames.WidgetSample.GameWidgetProvider")))
-                {
-                    intent.Call<AndroidJavaObject>("setComponent", componentName);
-                    intent.Call<AndroidJavaObject>("setAction",
-                        "android.appwidget.action.APPWIDGET_UPDATE");
-
-                    using (var appWidgetManager = new AndroidJavaClass(
-                        "android.appwidget.AppWidgetManager"))
-                    using (var manager =
-                        appWidgetManager.CallStatic<AndroidJavaObject>("getInstance",
-                            context))
-                    {
-                        int[] ids = manager.Call<int[]>("getAppWidgetIds", componentName);
-                        intent.Call<AndroidJavaObject>("putExtra",
-                            "appWidgetIds", ids);
-                    }
-
-                    context.Call("sendBroadcast", intent);
-                    Debug.Log("[WidgetDataWriter] Widget update broadcast sent.");
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning($"[WidgetDataWriter] Could not send widget update: {e.Message}");
-        }
-#endif
     }
 }
